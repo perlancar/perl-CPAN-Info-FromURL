@@ -12,17 +12,23 @@ our @EXPORT_OK = qw(extract_info_from_cpan_url);
 
 our %SPEC;
 
+our $re_author   = qr/(?:\w+)/;
+our $re_dist     = qr/(?:\w+(?:-\w+)*)/;
+our $re_mod      = qr/(?:\w+(?:::\w+)*)/;
+our $re_version  = qr/(?:v?[0-9]+(?:\.[0-9]+)*(?:_[0-9]+|-TRIAL)?)/;
+our $re_end_or_q = qr/(?:[?&]|\z)/;
+
 $SPEC{extract_info_from_cpan_url} = {
     v => 1.1,
     summary => 'Extract information from a CPAN-related URL',
     description => <<'_',
 
 Return a hash of information from some CPAN-related URL. Possible keys include:
-`site` (site nickname, include: `mcpan` [metacpan.org], `sco` [search.cpan.org],
-`cpanratings` [cpanratings.perl.org]), `author` (CPAN author ID), `module`
-(module name), `dist` (distribution name), `version` (distribution version).
-Some keys might not exist, depending on what information the URL provides.
-Return undef if URL is not detected to be of some CPAN-related URL.
+`site` (site nickname, include: `mcpan` [metacpan.org, api.metacpan.org], `sco`
+[search.cpan.org], `cpanratings` [cpanratings.perl.org]), `author` (CPAN author
+ID), `module` (module name), `dist` (distribution name), `version` (distribution
+version). Some keys might not exist, depending on what information the URL
+provides. Return undef if URL is not detected to be of some CPAN-related URL.
 
 _
     args => {
@@ -38,6 +44,7 @@ _
     },
     result_naked => 1,
     examples => [
+
         {
             name => "mcpan/pod/MOD",
             args => {url=>'https://metacpan.org/pod/Foo::Bar'},
@@ -49,34 +56,44 @@ _
             result => {site=>'mcpan', module=>'Foo'},
         },
         {
-            name => "metacpan/pod/release/AUTHOR/DIST-VERSION/lib/MOD.pm",
+            name => "mcpan/pod/release/AUTHOR/DIST-VERSION/lib/MOD.pm",
             args => {url=>'http://metacpan.org/pod/release/SRI/Mojolicious-6.46/lib/Mojo.pm'},
             result => {site=>'mcpan', author=>'SRI', dist=>'Mojolicious', version=>'6.46', module=>'Mojo'},
         },
         {
-            name => "metacpan/source/AUTHOR/DIST-VERSION/lib/MOD.pm",
+            name => "mcpan/source/AUTHOR/DIST-VERSION/lib/MOD.pm",
             args => {url=>'http://metacpan.org/source/SRI/Mojolicious-6.46/lib/Mojo.pm?'},
             result => {site=>'mcpan', author=>'SRI', dist=>'Mojolicious', version=>'6.46', module=>'Mojo'},
         },
         {
-            name => "api.metacpan/source/AUTHOR/DIST-VERSION",
+            name => "api.mcpan/source/AUTHOR/DIST-VERSION",
             args => {url=>'http://api.metacpan.org/source/SRI/Mojolicious-6.46?'},
-            result => {site=>'mcpan', author=>'SRI', dist=>'Mojolicious', version=>'6.46', module=>'Mojolicious'},
+            result => {site=>'mcpan', author=>'SRI', dist=>'Mojolicious', version=>'6.46'},
         },
         {
-            name => 'metacpan/release/DIST',
+            name => 'mcpan/release/DIST',
             args => {url=>'https://metacpan.org/release/Foo-Bar'},
-            result => {site=>'mcpan', dist=>'Foo-Bar', module=>'Foo::Bar'},
+            result => {site=>'mcpan', dist=>'Foo-Bar'},
         },
         {
-            name => 'metacpan/release/AUTHOR/DIST-VERSION',
+            name => 'mcpan/release/AUTHOR/DIST-VERSION',
             args => {url=>'https://metacpan.org/release/FOO/Bar-1.23'},
-            result => {site=>'mcpan', author=>'FOO', dist=>'Bar', version=>'1.23', module=>'Bar'},
+            result => {site=>'mcpan', author=>'FOO', dist=>'Bar', version=>'1.23'},
         },
         {
-            name => 'metacpan/author/AUTHOR',
+            name => 'mcpan/author/AUTHOR',
             args => {url=>'https://metacpan.org/author/FOO'},
             result => {site=>'mcpan', author=>'FOO'},
+        },
+        {
+            name => 'mcpan/changes/distribution/DIST',
+            args => {url=>'https://metacpan.org/changes/distribution/Module-XSOrPP'},
+            result => {site=>'mcpan', dist=>'Module-XSOrPP'},
+        },
+        {
+            name => 'mcpan/requires/distribution/DIST',
+            args => {url=>'https://metacpan.org/requires/distribution/Module-XSOrPP?sort=[[2,1]]'},
+            result => {site=>'mcpan', dist=>'Module-XSOrPP'},
         },
 
         {
@@ -128,42 +145,38 @@ sub extract_info_from_cpan_url {
         # note: /module is the old URL. /pod might misreport a script as a
         # module, e.g. metacpan.org/pod/cpanm.
         if ($url =~ m!\A(?:pod|module)/
-                      (\w+(?:::\w+)*)(?:[?&]|\z)!x) {
+                      ($re_mod)(?:[?&]|\z)!x) {
             $res->{module} = $1;
         } elsif ($url =~ m!\A(?:pod/release/|source/)
-                           ([^/]+)/([^/]+)-([0-9][^/]*)/lib/((?:[^/]+/)*\w+)\.(?:pm|pod)
-                           (?:[?&]|\z)!x) {
+                           ($re_author)/($re_dist)-($re_version)/lib/((?:[^/]+/)*\w+)\.(?:pm|pod)
+                           $re_end_or_q!x) {
             $res->{author} = $1;
             $res->{dist} = $2;
             $res->{version} = $3;
             $res->{module} = $4; $res->{module} =~ s!/!::!g;
         } elsif ($url =~ m!\A(?:pod/release/|source/)
-                           ([^/]+)/([^/]+)-([0-9][^/?&]*)/?
-                           (?:[?&]|\z)!x) {
+                           ($re_author)/($re_dist)-($re_version)/?
+                           $re_end_or_q!x) {
             $res->{author} = $1;
             $res->{dist} = $2;
             $res->{version} = $3;
-            $res->{module} = $res->{dist}; $res->{module} =~ s/-/::/g;
         } elsif ($url =~ m!\Arelease/
-                           (\w+(?:-\w+)*)/?
-                           (?:[?&]|\z)!x) {
+                           ($re_dist)/?
+                           $re_end_or_q!x) {
             $res->{dist} = $1;
-            $res->{module} = $res->{dist}; $res->{module} =~ s/-/::/g;
         } elsif ($url =~ m!\Arelease/
-                           ([^/]+)/(\w+(?:-\w+)*)-(\d[^/?&]*)/?
-                           (?:[?&]|\z)!x) {
+                           ($re_author)/($re_dist)-($re_version)/?
+                           $re_end_or_q!x) {
             $res->{author} = $1;
             $res->{dist} = $2;
             $res->{version} = $3;
-            $res->{module} = $res->{dist}; $res->{module} =~ s/-/::/g;
-        } elsif ($url =~ m!\Achanges/distribution/
-                           (\w+(?:-\w+)*)/?
-                           (?:[?&]|\z)!x) {
+        } elsif ($url =~ m!\A(?:changes|requires)/distribution/
+                           ($re_dist)/?
+                           $re_end_or_q!x) {
             $res->{dist} = $1;
-            $res->{module} = $res->{dist}; $res->{module} =~ s/-/::/g;
         } elsif ($url =~ m!\Aauthor/
-                           (\w+)/?
-                           (?:[?&]|\z)!x) {
+                           ($re_author)/?
+                           $re_end_or_q!x) {
             $res->{author} = $1;
         }
     } elsif ($url =~ s!\Ahttps?://search\.cpan\.org/?!!i) {
