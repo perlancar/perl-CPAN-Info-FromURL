@@ -12,6 +12,7 @@ our @EXPORT_OK = qw(extract_cpan_info_from_url);
 
 our %SPEC;
 
+our $re_proto_http = qr!(?:https?://)!i;
 our $re_author   = qr/(?:\w+)/;
 our $re_dist     = qr/(?:\w+(?:-\w+)*)/;
 our $re_mod      = qr/(?:\w+(?:::\w+)*)/;
@@ -53,7 +54,7 @@ _
         },
         {
             name => "mcpan/module/MOD",
-            args => {url=>'https://metacpan.org/module/Foo?'},
+            args => {url=>'metacpan.org/module/Foo?'},
             result => {site=>'mcpan', module=>'Foo'},
         },
         {
@@ -169,7 +170,7 @@ sub extract_cpan_info_from_url {
     my $res;
 
     # metacpan
-    if ($url =~ s!\Ahttps?://(api\.)?metacpan\.org/?!!i) {
+    if ($url =~ s!\A$re_proto_http?(api\.)?metacpan\.org/?!!i) {
 
         $res->{site} = 'mcpan';
         # note: /module is the old URL. /pod might misreport a script as a
@@ -216,7 +217,7 @@ sub extract_cpan_info_from_url {
             $res->{author} = $1;
         }
 
-    } elsif ($url =~ s!\Ahttps?://search\.cpan\.org/?!!i) {
+    } elsif ($url =~ s!\A$re_proto_http?search\.cpan\.org/?!!i) {
 
         $res->{site} = 'sco';
         if ($url =~ m!\Adist/
@@ -259,7 +260,7 @@ sub extract_cpan_info_from_url {
             }
         }
 
-    } elsif ($url =~ s!\Ahttps?://cpanratings\.perl\.org/?!!i) {
+    } elsif ($url =~ s!\A$re_proto_http?cpanratings\.perl\.org/?!!i) {
 
         $res->{site} = 'cpanratings';
         if ($url =~ m!\Adist/
@@ -268,7 +269,7 @@ sub extract_cpan_info_from_url {
             $res->{dist} = $1;
         }
 
-    } elsif ($url =~ s!\Ahttps?://rt\.cpan\.org/?!!i) {
+    } elsif ($url =~ s!\A$re_proto_http?rt\.cpan\.org/?!!i) {
 
         $res->{site} = 'rt';
         if ($url =~ m!\A(?:Public/)?Dist/Display\.html!) {
