@@ -8,7 +8,7 @@ use strict;
 use warnings;
 
 use Exporter qw(import);
-our @EXPORT_OK = qw(extract_info_from_cpan_url);
+our @EXPORT_OK = qw(extract_cpan_info_from_url);
 
 our %SPEC;
 
@@ -18,17 +18,18 @@ our $re_mod      = qr/(?:\w+(?:::\w+)*)/;
 our $re_version  = qr/(?:v?[0-9]+(?:\.[0-9]+)*(?:_[0-9]+|-TRIAL)?)/;
 our $re_end_or_q = qr/(?:[?&]|\z)/;
 
-$SPEC{extract_info_from_cpan_url} = {
+$SPEC{extract_cpan_info_from_url} = {
     v => 1.1,
-    summary => 'Extract information from a CPAN-related URL',
+    summary => 'Extract/guess information from a URL',
     description => <<'_',
 
-Return a hash of information from some CPAN-related URL. Possible keys include:
+Return a hash of information from a CPAN-related URL. Possible keys include:
 `site` (site nickname, include: `mcpan` [metacpan.org, api.metacpan.org], `sco`
-[search.cpan.org], `cpanratings` [cpanratings.perl.org]), `author` (CPAN author
-ID), `module` (module name), `dist` (distribution name), `version` (distribution
-version). Some keys might not exist, depending on what information the URL
-provides. Return undef if URL is not detected to be of some CPAN-related URL.
+[search.cpan.org], `cpanratings` [cpanratings.perl.org], `rt` ([rt.cpan.org]),
+`cpan` [any normal CPAN mirror]), `author` (CPAN author ID), `module` (module
+name), `dist` (distribution name), `version` (distribution version). Some keys
+might not exist, depending on what information the URL provides. Return undef if
+URL is not detected to be of some CPAN-related URL.
 
 _
     args => {
@@ -59,6 +60,11 @@ _
             name => "mcpan/pod/release/AUTHOR/DIST-VERSION/lib/MOD.pm",
             args => {url=>'http://metacpan.org/pod/release/SRI/Mojolicious-6.46/lib/Mojo.pm'},
             result => {site=>'mcpan', author=>'SRI', dist=>'Mojolicious', version=>'6.46', module=>'Mojo'},
+        },
+        {
+            name => "mcpan/pod/release/AUTHOR/DIST-VERSION/bin/SCRIPT",
+            args => {url=>'http://metacpan.org/pod/release/PERLANCAR/App-PMUtils-1.23/bin/pmpath'},
+            result => {site=>'mcpan', author=>'PERLANCAR', dist=>'App-PMUtils', version=>'1.23', script=>'pmpath'},
         },
         {
             name => "mcpan/source/AUTHOR/DIST-VERSION/lib/MOD.pm",
@@ -97,63 +103,93 @@ _
         },
 
         {
-            args => {url=>'http://search.cpan.org/~unera/DR-SunDown-0.02/lib/DR/SunDown.pm'},
-            result => 'DR::SunDown',
-        },
-        {
-            args => {url=>'https://search.cpan.org/~sri/Mojolicious-6.47/lib/Mojo.pm'},
-            result => 'Mojo',
-        },
-
-        # search.cpan.org/dist/DIST
-        {
+            name => 'sco/dist/DIST',
             args => {url=>'http://search.cpan.org/dist/Foo-Bar/'},
-            result => 'Foo::Bar',
+            result => {site=>'sco', dist=>'Foo-Bar'},
         },
-
-        # search.cpan.org/perldoc?MOD
         {
+            name => 'sco/perldoc?MOD',
             args => {url=>'http://search.cpan.org/perldoc?Foo::Bar'},
-            result => 'Foo::Bar',
+            result => {site=>'sco', module=>'Foo::Bar'},
         },
         {
-            args => {url=>'http://search.cpan.org/perldoc?Foo'},
-            result => 'Foo',
-        },
-
-        # search.cpan.org/search?mode=module&query=MOD
-        {
+            name => 'sco/search?mode=module&query=MOD',
             args => {url=>'http://search.cpan.org/search?mode=module&query=DBIx%3A%3AClass'},
-            result => 'DBIx::Class',
+            result => {site=>'sco', module=>'DBIx::Class'},
+        },
+        {
+            name => 'sco/~AUTHOR',
+            args => {url=>'http://search.cpan.org/~unera?'},
+            result => {site=>'sco', author=>'unera'},
+        },
+        {
+            name => 'sco/~AUTHOR/DIST-REL/lib/MOD.pm',
+            args => {url=>'http://search.cpan.org/~unera/DR-SunDown-0.02/lib/DR/SunDown.pm'},
+            result => {site=>'sco', author=>'unera', dist=>'DR-SunDown', version=>'0.02', module=>'DR::SunDown'},
+        },
+        {
+            name => 'sco/~AUTHOR/DIST-REL/bin/SCRIPT.pm',
+            args => {url=>'http://search.cpan.org/~perlancar/App-PMUtils-1.23/bin/pmpath'},
+            result => {site=>'sco', author=>'perlancar', dist=>'App-PMUtils', version=>'1.23', script=>'pmpath'},
         },
 
-        # UNKNOWN
         {
+            name => 'cpan/authors/id/A/AU/AUTHOR',
+            args => {url=>'file:/cpan/authors/id/A/AU/AUTHOR?'},
+            result => {site=>'cpan', author=>'AUTHOR'},
+        },
+        {
+            name => 'cpan/authors/id/A/AU/AUTHOR/DIST-VERSION.tar.gz',
+            args => {url=>'file:/cpan/authors/id/A/AU/AUTHOR/Foo-Bar-1.0.tar.gz'},
+            result => {site=>'cpan', author=>'AUTHOR', release=>'Foo-Bar-1.0.tar.gz', dist=>'Foo-Bar', version=>'1.0'},
+        },
+
+        {
+            name => 'cpanratings/dist/DIST',
+            args => {url=>'http://cpanratings.perl.org/dist/Submodules'},
+            result => {site=>'cpanratings', dist=>'Submodules'},
+        },
+
+        {
+            name => 'rt/(Public/)Dist/Display.html?Queue=DIST',
+            args => {url=>'https://rt.cpan.org/Dist/Display.html?Queue=Perinci-Sub-Gen-AccessTable-DBI'},
+            result => {site=>'rt', dist=>'Perinci-Sub-Gen-AccessTable-DBI'},
+        },
+
+        {
+            name => 'unknown',
             args => {url=>'https://www.google.com/'},
             result => undef,
         },
     ],
 };
-sub extract_info_from_cpan_url {
+sub extract_cpan_info_from_url {
     my $url = shift;
 
     my $res;
 
     # metacpan
     if ($url =~ s!\Ahttps?://(api\.)?metacpan\.org/?!!i) {
+
         $res->{site} = 'mcpan';
         # note: /module is the old URL. /pod might misreport a script as a
         # module, e.g. metacpan.org/pod/cpanm.
         if ($url =~ m!\A(?:pod|module)/
                       ($re_mod)(?:[?&]|\z)!x) {
             $res->{module} = $1;
-        } elsif ($url =~ m!\A(?:pod/release/|source/)
-                           ($re_author)/($re_dist)-($re_version)/lib/((?:[^/]+/)*\w+)\.(?:pm|pod)
-                           $re_end_or_q!x) {
+        } elsif ($url =~ s!\A(?:pod/release/|source/)
+                           ($re_author)/($re_dist)-($re_version)/?!!x) {
             $res->{author} = $1;
             $res->{dist} = $2;
             $res->{version} = $3;
-            $res->{module} = $4; $res->{module} =~ s!/!::!g;
+            if ($url =~ m!\Alib/((?:[^/]+/)*\w+)\.(?:pm|pod)!) {
+                $res->{module} = $1; $res->{module} =~ s!/!::!g;
+            } elsif ($url =~ m!\A(?:bin|scripts?)/
+                               (?:[^/]+/)*
+                               (.+?)
+                               $re_end_or_q!x) {
+                $res->{script} = $1;
+            }
         } elsif ($url =~ m!\A(?:pod/release/|source/)
                            ($re_author)/($re_dist)-($re_version)/?
                            $re_end_or_q!x) {
@@ -179,50 +215,95 @@ sub extract_info_from_cpan_url {
                            $re_end_or_q!x) {
             $res->{author} = $1;
         }
+
     } elsif ($url =~ s!\Ahttps?://search\.cpan\.org/?!!i) {
+
         $res->{site} = 'sco';
-    }
-
-    $res;
-}
-
-=begin comment
-
-if ($url =~ m!\Ahttps?://search\.cpan\.org/~[^/]+/[^/]+/lib/((?:[^/]+/)*\w+).pm\z!) {
-        my $mod = $1;
-        $mod =~ s!/!::!g;
-        return $mod;
-    }
-
-    if ($url =~ m!\Ahttps?://search\.cpan\.org/dist/([A-Za-z0-9_-]+)/?\z!) {
-        my $mod = $1;
-        $mod =~ s!-!::!g;
-        return $mod;
-    }
-
-    if ($url =~ m!\Ahttps?://search\.cpan\.org/perldoc\?(\w+(?:::\w+)*)\z!) {
-        return $1;
-    }
-
-    # used by perlmonks.org
-    {
-        if ($url =~ m!\Ahttps?://search\.cpan\.org/search\?mode=module&query=(.+)\z!) {
+        if ($url =~ m!\Adist/
+                     ($re_dist)/?
+                     $re_end_or_q!x) {
+            $res->{dist} = $1;
+        } elsif ($url =~ m!\Aperldoc\?
+                           (.+?)
+                           $re_end_or_q!x) {
             require URI::Escape;
-            my $mod = URI::Escape::uri_unescape($1);
-            last unless $mod =~ /\A\w+(::\w+)*\z/;
-            return $mod;
+            $res->{module} = URI::Escape::uri_unescape($1);
+        } elsif ($url =~ m!\Asearch\?!) {
+            # used by perlmonks.org
+            if ($url =~ m![?&]mode=module(?:&|\z)! && $
+                    url =~ m![?&]query=(.+?)(?:&|\z)!) {
+                require URI::Escape;
+                $res->{module} = URI::Escape::uri_unescape($1);
+            } elsif ($url =~ m![?&]mode=dist(?:&|\z)! && $
+                    url =~ m![?&]query=(.+?)(?:&|\z)!) {
+                require URI::Escape;
+                $res->{dist} = URI::Escape::uri_unescape($1);
+            } elsif ($url =~ m![?&]mode=author(?:&|\z)! && $
+                    url =~ m![?&]query=(.+?)(?:&|\z)!) {
+                require URI::Escape;
+                $res->{author} = URI::Escape::uri_unescape($1);
+            }
+        } elsif ($url =~ s!\A~(\w+)/?!!) {
+            $res->{author} = $1;
+            if ($url =~ s!($re_dist)-($re_version)/?!!) {
+                $res->{dist} = $1;
+                $res->{version} = $2;
+                if ($url =~ m!\Alib/((?:[^/]+/)*\w+)\.(?:pm|pod)!) {
+                    $res->{module} = $1; $res->{module} =~ s!/!::!g;
+                } elsif ($url =~ m!\A(?:bin|scripts?)/
+                                   (?:[^/]+/)*
+                                   (.+?)
+                                   $re_end_or_q!x) {
+                    $res->{script} = $1;
+                }
+            }
+        }
+
+    } elsif ($url =~ s!\Ahttps?://cpanratings\.perl\.org/?!!i) {
+
+        $res->{site} = 'cpanratings';
+        if ($url =~ m!\Adist/
+                     ($re_dist)/?
+                     $re_end_or_q!x) {
+            $res->{dist} = $1;
+        }
+
+    } elsif ($url =~ s!\Ahttps?://rt\.cpan\.org/?!!i) {
+
+        $res->{site} = 'rt';
+        if ($url =~ m!\A(?:Public/)?Dist/Display\.html!) {
+            if ($url =~ m![?&](?:Queue|Name)=(.+?)(?:&|\z)!) {
+                require URI::Escape;
+                $res->{dist} = URI::Escape::uri_unescape($1);
+            }
+        }
+
+    } elsif ($url =~ m!/authors/id/(\w)/\1(\w)/(\1\2\w+)
+                       (?:/
+                           (?:[^/]+/)* # subdir
+                           (($re_dist)-($re_version)\.(?:tar\.\w+|tar|zip|tgz|tbz|tbz2))
+                       )?
+                       $re_end_or_q!ix) {
+        $res->{site} = 'cpan';
+        $res->{author} = $3;
+        if (defined $4) {
+            $res->{release} = $4;
+            $res->{dist} = $5;
+            $res->{version} = $6;
         }
     }
-
-    undef;
+    $res;
 }
-
-=end comment
 
 1;
 # ABSTRACT:
 
 =head1 SEE ALSO
 
-L<CPAN::Module::FromURL>, an earlier module that will be modified to be based on
-this module.
+L<CPAN::Author::FromURL>
+
+L<CPAN::Dist::FromURL>
+
+L<CPAN::Module::FromURL>
+
+L<CPAN::Release::FromURL>
