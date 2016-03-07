@@ -1,5 +1,6 @@
 Revision history for CPAN-Info-FromURL
 
-0.04    2016-03-05 (PERLANCAR) (unreleased)
+0.05    2016-03-07 (PERLANCAR)
 
-         - First release.
+         - First release. CPAN::Module::FromURL from CPAN-Module-FromURL is now
+           merged here, and uses CPAN::Info::FromURL.
