@@ -119,6 +119,11 @@ _
             result => {site=>'sco', module=>'DBIx::Class'},
         },
         {
+            name => 'sco/search?module=MOD',
+            args => {url=>'http://search.cpan.org/search?module=ToolSet'},
+            result => {site=>'sco', module=>'ToolSet'},
+        },
+        {
             name => 'sco/~AUTHOR',
             args => {url=>'http://search.cpan.org/~unera?'},
             result => {site=>'sco', author=>'unera'},
@@ -243,6 +248,10 @@ sub extract_cpan_info_from_url {
                     url =~ m![?&]query=(.+?)(?:&|\z)!) {
                 require URI::Escape;
                 $res->{author} = URI::Escape::uri_unescape($1);
+            # used by some articles
+            } elsif ($url =~ m![?&]module=(.+?)(?:&|\z)!) {
+                require URI::Escape;
+                $res->{module} = URI::Escape::uri_unescape($1);
             }
         } elsif ($url =~ s!\A~(\w+)/?!!) {
             $res->{author} = $1;

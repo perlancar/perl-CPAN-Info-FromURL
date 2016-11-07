@@ -42,6 +42,11 @@ $SPEC{extract_cpan_module_from_url} = {
             result => 'Foo::Bar',
         },
         {
+            name => "sco/search?module",
+            args => {url=>'http://search.cpan.org/search?module=ToolSet'},
+            result => 'ToolSet',
+        },
+        {
             name => 'unknown',
             args => {url=>'https://www.google.com/'},
             result => undef,
