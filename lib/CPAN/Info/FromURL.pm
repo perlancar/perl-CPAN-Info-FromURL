@@ -19,6 +19,12 @@ our $re_mod      = qr/(?:\w+(?:::\w+)*)/;
 our $re_version  = qr/(?:v?[0-9]+(?:\.[0-9]+)*(?:_[0-9]+|-TRIAL)?)/;
 our $re_end_or_q = qr/(?:[?&]|\z)/;
 
+sub _normalize_mod {
+    my $mod = shift;
+    $mod =~ s/'/::/g;
+    $mod;
+}
+
 $SPEC{extract_cpan_info_from_url} = {
     v => 1.1,
     summary => 'Extract/guess information from a URL',
@@ -122,6 +128,11 @@ _
             name => 'sco/search?module=MOD',
             args => {url=>'http://search.cpan.org/search?module=ToolSet'},
             result => {site=>'sco', module=>'ToolSet'},
+        },
+        {
+            name => 'sco/search?module=MOD (#2)',
+            args => {url=>'http://search.cpan.org/search?module=Acme::Don\'t'},
+            result => {site=>'sco', module=>'Acme::Don::t'},
         },
         {
             name => 'sco/~AUTHOR',
@@ -245,7 +256,7 @@ sub extract_cpan_info_from_url {
             if ($url =~ m![?&]mode=module(?:&|\z)! && $
                     url =~ m![?&]query=(.+?)(?:&|\z)!) {
                 require URI::Escape;
-                $res->{module} = URI::Escape::uri_unescape($1);
+                $res->{module} = _normalize_mod(URI::Escape::uri_unescape($1));
             } elsif ($url =~ m![?&]mode=dist(?:&|\z)! && $
                     url =~ m![?&]query=(.+?)(?:&|\z)!) {
                 require URI::Escape;
@@ -257,7 +268,7 @@ sub extract_cpan_info_from_url {
             # used by some articles
             } elsif ($url =~ m![?&]module=(.+?)(?:&|\z)!) {
                 require URI::Escape;
-                $res->{module} = URI::Escape::uri_unescape($1);
+                $res->{module} = _normalize_mod(URI::Escape::uri_unescape($1));
             }
         } elsif ($url =~ s!\A~(\w+)/?!!) {
             $res->{author} = $1;
