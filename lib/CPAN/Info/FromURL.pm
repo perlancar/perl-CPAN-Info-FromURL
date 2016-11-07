@@ -157,6 +157,12 @@ _
         },
 
         {
+            name => 'perldoc.perl.org/MOD/SUBMOD.html',
+            args => {url=>'http://perldoc.perl.org/Module/CoreList.html'},
+            result => {site=>'perldoc.perl.org', module=>'Module::CoreList'},
+        },
+
+        {
             name => 'rt/(Public/)Dist/Display.html?Queue=DIST',
             args => {url=>'https://rt.cpan.org/Dist/Display.html?Queue=Perinci-Sub-Gen-AccessTable-DBI'},
             result => {site=>'rt', dist=>'Perinci-Sub-Gen-AccessTable-DBI'},
@@ -276,6 +282,15 @@ sub extract_cpan_info_from_url {
                      ($re_dist)/?
                      $re_end_or_q!x) {
             $res->{dist} = $1;
+        }
+
+    } elsif ($url =~ s!\A$re_proto_http?perldoc\.perl\.org/?!!i) {
+
+        $res->{site} = 'perldoc.perl.org';
+        if ($url =~ m!^(\w+(?:/\w+)*)\.html!) {
+            my $mod = $1;
+            $mod =~ s!/!::!g;
+            $res->{module} = $mod;
         }
 
     } elsif ($url =~ s!\A$re_proto_http?rt\.cpan\.org/?!!i) {
