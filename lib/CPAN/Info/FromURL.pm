@@ -31,12 +31,13 @@ $SPEC{extract_cpan_info_from_url} = {
     description => <<'_',
 
 Return a hash of information from a CPAN-related URL. Possible keys include:
-`site` (site nickname, include: `mcpan` [metacpan.org, api.metacpan.org], `sco`
-[search.cpan.org], `cpanratings` [cpanratings.perl.org], `rt` ([rt.cpan.org]),
-`cpan` [any normal CPAN mirror]), `author` (CPAN author ID), `module` (module
-name), `dist` (distribution name), `version` (distribution version). Some keys
-might not exist, depending on what information the URL provides. Return undef if
-URL is not detected to be of some CPAN-related URL.
+`site` (site nickname, include: `mcpan` [metacpan.org, api.metacpan.org,
+fastapi.metacpan.org], `sco` [search.cpan.org], `cpanratings`
+[cpanratings.perl.org], `rt` ([rt.cpan.org]), `cpan` [any normal CPAN mirror]),
+`author` (CPAN author ID), `module` (module name), `dist` (distribution name),
+`version` (distribution version). Some keys might not exist, depending on what
+information the URL provides. Return undef if URL is not detected to be of some
+CPAN-related URL.
 
 _
     args => {
@@ -82,6 +83,11 @@ _
             name => "api.mcpan/source/AUTHOR/DIST-VERSION",
             args => {url=>'http://api.metacpan.org/source/SRI/Mojolicious-6.46?'},
             result => {site=>'mcpan', author=>'SRI', dist=>'Mojolicious', version=>'6.46'},
+        },
+        {
+            name => "fastapi.mcpan/v1/module/MODULE",
+            args => {url=>'http://fastapi.metacpan.org/v1/module/Moose'},
+            result => {site=>'mcpan', module=>'Moose'},
         },
         {
             name => 'mcpan/release/DIST',
@@ -192,7 +198,7 @@ sub extract_cpan_info_from_url {
     my $res;
 
     # metacpan
-    if ($url =~ s!\A$re_proto_http?(api\.)?metacpan\.org/?!!i) {
+    if ($url =~ s!\A$re_proto_http?(?:fastapi\.|api\.)?metacpan\.org/?(?:v\d/)?!!i) {
 
         $res->{site} = 'mcpan';
         # note: /module is the old URL. /pod might misreport a script as a
