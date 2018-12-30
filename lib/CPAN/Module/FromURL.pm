@@ -47,6 +47,11 @@ $SPEC{extract_cpan_module_from_url} = {
             result => 'ToolSet',
         },
         {
+            name => "mojo",
+            args => {url=>'https://mojolicious.org/perldoc/Mojo/DOM/CSS'},
+            result => 'Mojo::DOM::CSS',
+        },
+        {
             name => 'unknown',
             args => {url=>'https://www.google.com/'},
             result => undef,

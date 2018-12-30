@@ -186,6 +186,12 @@ _
         },
 
         {
+            name => "mojo",
+            args => {url=>'https://mojolicious.org/perldoc/Mojo/DOM/CSS'},
+            result => {site=>'mojo', module=>'Mojo::DOM::CSS'},
+        },
+
+        {
             name => 'unknown',
             args => {url=>'https://www.google.com/'},
             result => undef,
@@ -318,6 +324,15 @@ sub extract_cpan_info_from_url {
                 require URI::Escape;
                 $res->{dist} = URI::Escape::uri_unescape($1);
             }
+        }
+
+    } elsif ($url =~ s!\A$re_proto_http?mojolicious\.org/?!!i) {
+
+        $res->{site} = 'mojo';
+        if ($url =~ m!\Aperldoc/([^?]+)!) {
+            my $mod = $1;
+            $mod =~ s!/!::!g;
+            $res->{module} = $mod;
         }
 
     } elsif ($url =~ m!/authors/id/(\w)/\1(\w)/(\1\2\w+)
