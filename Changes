@@ -1,3 +1,9 @@
+0.091   2020-10-02  Released-By: PERLANCAR; Urgency: medium
+
+	- Parse github repo URL, e.g.
+	  https://github.com/perlancar/perl-Foo-Bar.git -> dist Foo-Bar.
+
+
 0.090   2018-12-30  Released-By: PERLANCAR
 
 	- Fix regexes with regard to anchor character (#).
