@@ -1,6 +1,8 @@
 package CPAN::Info::FromURL;
 
+# AUTHORITY
 # DATE
+# DIST
 # VERSION
 
 use 5.010001;
@@ -198,6 +200,22 @@ _
         },
 
         {
+            name => "github (https, .git)",
+            args => {url=>'https://github.com/perlancar/perl-CPAN-Info-FromURL.git'},
+            result => {site=>'github', github_user=>"perlancar", github_repo=>"perl-CPAN-Info-FromURL", dist=>'CPAN-Info-FromURL'},
+        },
+        {
+            name => "github (https, no .git)",
+            args => {url=>'https://github.com/perlancar/perl-CPAN-Info-FromURL'},
+            result => {site=>'github', github_user=>"perlancar", github_repo=>"perl-CPAN-Info-FromURL", dist=>'CPAN-Info-FromURL'},
+        },
+        {
+            name => "github (git)",
+            args => {url=>'https://github.com/perlancar/perl-CPAN-Info-FromURL'},
+            result => {site=>'github', github_user=>"perlancar", github_repo=>"perl-CPAN-Info-FromURL", dist=>'CPAN-Info-FromURL'},
+        },
+
+        {
             name => 'unknown',
             args => {url=>'https://www.google.com/'},
             result => undef,
@@ -341,6 +359,13 @@ sub extract_cpan_info_from_url {
             $res->{module} = $mod;
         }
 
+    } elsif ($url =~ m!\A(?:$re_proto_http|\w+\@)?github\.com[:/]([A-Za-z0-9_-]+)/([A-Za-z0-9_-]+)(\.git|\z|/)!i) {
+        $res->{site} = 'github';
+        $res->{github_user} = $1;
+        $res->{github_repo} = $2;
+        require CPAN::Dist::FromRepoName;
+        my $dist = CPAN::Dist::FromRepoName::extract_cpan_dist_from_repo_name($2);
+        $res->{dist} = $dist if defined $dist;
     } elsif ($url =~ m!/authors/id/(\w)/\1(\w)/(\1\2\w+)
                        (?:/
                            (?:[^/]+/)* # subdir
