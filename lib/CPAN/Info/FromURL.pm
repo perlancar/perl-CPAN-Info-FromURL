@@ -221,6 +221,12 @@ _
         },
 
         {
+            name => "gitlab (https, .git)",
+            args => {url=>'https://gitlab.com/perlancar/perl-CPAN-Info-FromURL.git'},
+            result => {site=>'gitlab', github_user=>"perlancar", github_repo=>"perl-CPAN-Info-FromURL", dist=>'CPAN-Info-FromURL'},
+        },
+
+        {
             name => 'unknown',
             args => {url=>'https://www.google.com/'},
             result => undef,
@@ -364,12 +370,12 @@ sub extract_cpan_info_from_url {
             $res->{module} = $mod;
         }
 
-    } elsif ($url =~ m!\A(?:$re_proto_http|\w+\@|git://)?github\.com[:/]([A-Za-z0-9_-]+)/([A-Za-z0-9_-]+)(\.git|\z|/)!i) {
-        $res->{site} = 'github';
-        $res->{github_user} = $1;
-        $res->{github_repo} = $2;
+    } elsif ($url =~ m!\A(?:$re_proto_http|\w+\@|git://)?(gitlab|github)\.com[:/]([A-Za-z0-9_-]+)/([A-Za-z0-9_-]+)(\.git|\z|/)!i) {
+        $res->{site} = $1;
+        $res->{github_user} = $2;
+        $res->{github_repo} = $3;
         require CPAN::Dist::FromRepoName;
-        my $dist = CPAN::Dist::FromRepoName::extract_cpan_dist_from_repo_name($2);
+        my $dist = CPAN::Dist::FromRepoName::extract_cpan_dist_from_repo_name($3);
         $res->{dist} = $dist if defined $dist;
     } elsif ($url =~ m!/authors/id/(\w)/\1(\w)/(\1\2\w+)
                        (?:/
