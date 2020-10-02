@@ -211,7 +211,12 @@ _
         },
         {
             name => "github (git)",
-            args => {url=>'https://github.com/perlancar/perl-CPAN-Info-FromURL'},
+            args => {url=>'git@github.com:perlancar/perl-CPAN-Info-FromURL.git'},
+            result => {site=>'github', github_user=>"perlancar", github_repo=>"perl-CPAN-Info-FromURL", dist=>'CPAN-Info-FromURL'},
+        },
+        {
+            name => "github (git)",
+            args => {url=>'git://github.com/perlancar/perl-CPAN-Info-FromURL'},
             result => {site=>'github', github_user=>"perlancar", github_repo=>"perl-CPAN-Info-FromURL", dist=>'CPAN-Info-FromURL'},
         },
 
@@ -359,7 +364,7 @@ sub extract_cpan_info_from_url {
             $res->{module} = $mod;
         }
 
-    } elsif ($url =~ m!\A(?:$re_proto_http|\w+\@)?github\.com[:/]([A-Za-z0-9_-]+)/([A-Za-z0-9_-]+)(\.git|\z|/)!i) {
+    } elsif ($url =~ m!\A(?:$re_proto_http|\w+\@|git://)?github\.com[:/]([A-Za-z0-9_-]+)/([A-Za-z0-9_-]+)(\.git|\z|/)!i) {
         $res->{site} = 'github';
         $res->{github_user} = $1;
         $res->{github_repo} = $2;
